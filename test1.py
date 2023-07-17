@@ -1,82 +1,111 @@
-
 import numpy as np
+from numpy.linalg import inv, cholesky
+from scipy.special import eval_chebyt
 
-class AmericanOptionPricer:
-    def __init__(self, N, m, T, basis_functions):
-        self.N = N
-        self.m = m
+
+class MaxCallOption:
+    def __init__(self, K, T):
+        self.K = K
         self.T = T
-        self.basis_functions = basis_functions
 
-    def generate_stock_paths(self):
-        # Generate N independent stock paths
-        paths = np.zeros((self.N, self.m + 1))
-        dt = self.T / self.m
+    def payoff(self, S):
+        return np.maximum(np.max(S, axis=2) - self.K, 0)
 
-        for i in range(self.N):
-            paths[i, 0] = initial_stock_price  # Set initial stock price
-            for j in range(self.m):
-                # Simulate stock price evolution using your preferred method
-                paths[i, j + 1] = simulate_next_stock_price(paths[i, j], dt)
 
-        return paths
+class BlackScholesProcess:
+    def __init__(self, dim, r, sigma, mu):
+        self.dim = dim
+        self.r = r
+        self.sigma = sigma
+        self.mu = mu
 
-    def compute_option_price(self):
-        paths = self.generate_stock_paths()
+    def generate_paths(self, S0, N, m, T):
+        dt = T / m
+        dW = np.random.normal(size=(N, m, self.dim)) * np.sqrt(dt)  # increments of standard Brownian motion
+        W = np.cumsum(dW, axis=1)  # standard Brownian motion
+        t = np.linspace(dt, T, m)  # time grid
+        if self.dim > 1:
+            L = np.linalg.cholesky(
+                self.sigma).T  # Cholesky decomposition of the covariance matrix, transposed to get lower triangular matrix
+            W = np.array([np.dot(L, w.T).T for w in W])  # correlated Brownian motion
+        S = np.zeros((N, m + 1, self.dim))  # initialize S
+        S[:, 0, :] = S0  # set initial asset prices
+        # apply geometric Brownian motion formula for remaining times
+        S[:, 1:, :] = S0[:, None] * np.exp(((self.mu - 0.5 * np.diag(self.sigma))[:, None] * t + W.T).T)
+        return S
 
-        # Step 2: Set terminal values
-        terminal_values = g(paths[:, -1])
 
-        # Step 3: Backward calculation
-        for i in range(self.m - 1, 0, -1):
-            current_paths = paths[:, i]
-            continuation_values = np.zeros_like(current_paths)
-            exercise_values = np.zeros_like(current_paths)
+class ChebyshevBasis:
+    def __init__(self, degree):
+        self.degree = degree
 
-            for j in range(self.N):
-                if g(current_paths[j]) > 0:  # Check if option is in the money
-                    continuation_values[j] = self.compute_continuation_value(current_paths[j])
-                    exercise_values[j] = g(current_paths[j])
+    def evaluate(self, x):
+        return eval_chebyt(np.arange(self.degree + 1)[:, None], x)
 
-            # Update option values
-            terminal_values = np.where(exercise_values >= continuation_values, exercise_values, terminal_values)
 
-        return np.mean(terminal_values)
+class LongstaffSchwartz:
+    def __init__(self, option, basis, N):
+        self.option = option
+        self.basis = basis
+        self.N = N
 
-    def compute_continuation_value(self, S):
-        X = np.vstack([basis_func(S) for basis_func in self.basis_functions]).T
-        return np.dot(X, self.optimal_coefficients)
+    def price(self, process, S0, m):
+        # 1. Generate paths
+        S = process.generate_paths(S0, self.N, m, self.option.T)
+        m = S.shape[1] - 1  # number of time steps
+        d = S.shape[2]  # number of dimensions
 
-    def solve_regression(self, paths, values):
-        X = np.vstack([basis_func(paths) for basis_func in self.basis_functions]).T
-        self.optimal_coefficients = np.linalg.inv(X.T @ X) @ X.T @ values
+        # 2. Compute the payoff at the last time step
+        #V = self.option.payoff(S[:, m])
+        V = self.option.payoff(S[:, m, :])
+
+
+        # 3. Working backwards in time
+        for t in range(m - 1, 0, -1):
+            # Select in-the-money paths
+            in_the_money = self.option.payoff(S[:, t]) > 0
+            S_in_the_money = S[in_the_money, t]
+            V_in_the_money = V[in_the_money]
+
+            # Compute X and Y for the least squares problem
+            H = self.basis.evaluate(S_in_the_money)
+            X = H
+            Y = V_in_the_money
+
+            # Solve the least squares problem
+            a_star = inv(X.T @ X) @ X.T @ Y
+
+            # Compute the continuation values
+            C_star = X @ a_star
+
+            # Update option values where exercise is beneficial
+            V[in_the_money] = np.where(
+                self.option.payoff(S_in_the_money) > C_star,
+                self.option.payoff(S_in_the_money),
+                V[in_the_money])
+
+        # 4. Compute and return the discounted expected payoff
+        return np.exp(-process.r * self.option.T) * np.mean(V)
+
 
 if __name__ == '__main__':
+    # Parameters
+    r = np.array([0.05, 0.05, 0.05])
+    S0 = np.array([100, 100, 100])
+    mu = np.array([0.05, 0.05, 0.05])
+    sigma = np.array([[0.04, 0.01, 0.01], [0.01, 0.04, 0.01], [0.01, 0.01, 0.04]])  # Covariance matrix
+    K = 100
+    T = 1
+    N = 50000
+    m = 50
+    degree = 2
 
-    # Usage example
-    N = 10000  # Number of paths
-    m = 100  # Number of exercise dates
-    T = 1.0  # Time to maturity
-    basis_functions = [lambda x: x, lambda x: x ** 2]  # Example of basis functions
+    # Objects
+    option = MaxCallOption(K, T)
+    process = BlackScholesProcess(len(S0), r, sigma, mu)
+    basis = ChebyshevBasis(degree)
+    ls = LongstaffSchwartz(option, basis, N)
 
-    option_pricer = AmericanOptionPricer(N, m, T, basis_functions)
-    option_price = option_pricer.compute_option_price()
-
-    print("American Option Price:", option_price)
-""" 
-
-Note
-that
-this
-code is a
-simplified
-implementation and assumes
-that
-you
-have
-defined
-functions
-`g`
-for the exercise value and `simulate_next_stock_price` for 
-simulating the next stock price.You would need to modify 
-and customize the code to match your specific requirements and market model."""
+    # Price
+    price = ls.price(process, S0, m)
+    print('The max-call option price is', price)

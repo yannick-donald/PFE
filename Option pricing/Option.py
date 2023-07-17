@@ -29,3 +29,13 @@ class AmericanOption(Option):
     def early_exercise_boundary(self, process):
         # To be implemented
         pass
+
+
+class MaxCallOption(Option):
+    def __init__(self, K, T,S0):
+        self.K = K
+        self.T = T
+        self.S0 =S0
+
+    def payoff(self, S):
+        return np.maximum(np.max(S, axis=2) - self.K, 0)
