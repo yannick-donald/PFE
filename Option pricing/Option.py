@@ -32,10 +32,20 @@ class AmericanOption(Option):
 
 
 class MaxCallOption(Option):
-    def __init__(self, K, T,S0):
+    def __init__(self, K, T, S0):
         self.K = K
         self.T = T
-        self.S0 =S0
+        self.S0 = S0
 
     def payoff(self, S):
-        return np.maximum(np.max(S, axis=2) - self.K, 0)
+        return np.maximum(np.max(S, axis=1) - self.K, 0)
+
+
+class MaxPutOption(Option):
+    def __init__(self, K, T, S0):
+        self.K = K
+        self.T = T
+        self.S0 = S0
+
+    def payoff(self, S):
+        return np.maximum(-np.max(S, axis=1) + self.K, 0)
