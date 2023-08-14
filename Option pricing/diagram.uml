@@ -1,0 +1,167 @@
+@startuml
+
+class PricingMethod {
+    - option: Option
+    - basis: RegressionBasis
+    - N: int
+    + price()
+}
+
+class LongstaffSchwartz {
+    - option: Option
+    - basis: RegressionBasis
+    - N: int
+    + price()
+}
+
+class Option {
+    - K: float
+    - T: float
+    + payoff(S: np.ndarray) : np.ndarray
+}
+
+class BlackScholesProcess {
+    - mu: Union[float, np.ndarray]
+    - vol: Union[float, np.ndarray]
+    - corr: Union[float, np.ndarray]
+    - sigma: np.ndarray
+    + generate_paths(S0: np.ndarray, N: int, m: int, T: float) : np.ndarray
+    + generate_paths_qmc(S0: np.ndarray, N: int, m: int, T: float, type_qmc='sobol') : np.ndarray
+}
+
+class RegressionBasis {
+    + evaluate(x: Union[float, np.ndarray]) : np.ndarray
+}
+
+class ChebyshevBasis {
+    - degree: int
+    - basis_name: str
+    + evaluate(x: np.ndarray) : np.ndarray
+}
+
+class LaguerreBasis {
+    - degree: int
+    - basis_name: str
+    + evaluate(x: np.ndarray) : np.ndarray
+}
+
+class HermiteBasis {
+    - degree: int
+    - basis_name: str
+    + evaluate(x: np.ndarray) : np.ndarray
+}
+
+class PolynomialBasis {
+    - degree: int
+    - basis_name: str
+    + evaluate(x: np.ndarray) : np.ndarray
+}
+
+class PolynomialBasis3D {
+    - degree: int
+    - basis_name: str
+    + evaluate(x: np.ndarray) : np.ndarray
+}
+
+class MonomialBasis3D {
+    - degree: int
+    - basis_name: str
+    + evaluate(x: np.ndarray) : np.ndarray
+}
+
+class PolynomialHortoBasis3D {
+    - degree: int
+    - horto_basis: RegressionBasis
+    - basis_name: str
+    + P(s: float, k: int, n: int) : List[float]
+    + evaluate(x: np.ndarray) : np.ndarray
+}
+
+class PolynomialBasisPayOff {
+    - degree: int
+    - horto_basis: RegressionBasis
+    - pay_off
+    + evaluate(x: np.ndarray) : np.ndarray
+}
+
+class MaxCallOption {
+    - K: float
+    - T: float
+    - S0: float
+    + payoff(S: np.ndarray) : np.ndarray
+    + __str__() : str
+}
+
+class MinPutOption {
+    - K: float
+    - T: float
+    - S0: float
+    + payoff(S: np.ndarray) : np.ndarray
+    + __str__() : str
+}
+
+class MaxPutOption {
+    - K: float
+    - T: float
+    - S0: float
+    + payoff(S: np.ndarray) : np.ndarray
+    + __str__() : str
+}
+
+class ArithmeticPutOption {
+    - K: float
+    - T: float
+    - S0: float
+    + payoff(S: np.ndarray) : np.ndarray
+    + __str__() : str
+}
+
+class GeometricPutOption {
+    - K: float
+    - T: float
+    - S0: float
+    + payoff(S: np.ndarray) : np.ndarray
+    + __str__() : str
+}
+
+class CallOption {
+    - K: float
+    - T: float
+    - S0: float
+    + payoff(S: np.ndarray) : np.ndarray
+    + __str__() : str
+}
+
+class PutOption {
+    - K: float
+    - T: float
+    - S0: float
+    + payoff(S: np.ndarray) : np.ndarray
+    + __str__() : str
+}
+
+
+
+PricingMethod --|> Option
+LongstaffSchwartz --|> Option
+Option --|> BlackScholesProcess
+BlackScholesProcess *-- RegressionBasis
+Option *-- PricingMethod
+RegressionBasis <|-- ChebyshevBasis
+RegressionBasis <|-- LaguerreBasis
+RegressionBasis <|-- HermiteBasis
+RegressionBasis <|-- PolynomialBasis
+RegressionBasis <|-- PolynomialBasis3D
+RegressionBasis <|-- MonomialBasis3D
+RegressionBasis <|-- PolynomialHortoBasis3D
+RegressionBasis <|-- PolynomialBasisPayOff
+Option <|-- MaxCallOption
+Option <|-- MinPutOption
+Option <|-- MaxPutOption
+Option <|-- ArithmeticPutOption
+Option <|-- GeometricPutOption
+Option <|-- CallOption
+Option <|-- PutOption
+
+@enduml
+

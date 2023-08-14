@@ -34,7 +34,8 @@ class BlackScholesProcess(StochasticProcess):
     def generate_paths(self, S0: np.ndarray, N: int, m: int, T: float) -> np.ndarray:
 
         dt = T / m
-        dW = np.random.normal(size=(N, m, self.dim)) * np.sqrt(dt)  # increments of standard Brownian motion
+        rng = np.random.default_rng(seed=1234)
+        dW = rng.normal(size=(N, m, self.dim),) * np.sqrt(dt)  # increments of standard Brownian motion
         W = np.cumsum(dW, axis=1)  # standard Brownian motion
 
         if self.dim > 1:

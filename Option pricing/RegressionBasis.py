@@ -6,12 +6,18 @@ from itertools import *
 
 
 class RegressionBasis(ABC):
+    # Classe abstraite qui définit une base de régression générique
+    # avec une méthode abstraite "evaluate" qui doit être implémentée par les classes dérivées.
     @abstractmethod
     def evaluate(self, x: Union[float, np.ndarray]) -> np.ndarray:
         pass
 
 
 class ChebyshevBasis(RegressionBasis):
+
+    # Classe implémentant la base de régression de Chebyshev.
+    # Elle utilise la fonction "eval_chebyt" de SciPy pour évaluer les polynômes de Chebyshev.
+
     def __init__(self, degree):
         self.degree = degree
         self.basis_name = "ChebyshevBasis"
@@ -21,6 +27,9 @@ class ChebyshevBasis(RegressionBasis):
 
 
 class LaguerreBasis(RegressionBasis):
+    # Classe implémentant la base de régression de Laguerre.
+    # Elle utilise la fonction "eval_laguerre" de SciPy pour évaluer les polynômes de Laguerre.
+
     def __init__(self, degree):
         self.degree = degree
         self.basis_name = "LaguerreBasis"
@@ -30,6 +39,9 @@ class LaguerreBasis(RegressionBasis):
 
 
 class HermiteBasis(RegressionBasis):
+    # Classe implémentant la base de régression de Hermite.
+    # Elle utilise la fonction "eval_hermite" de SciPy pour évaluer les polynômes de Hermite.
+
     def __init__(self, degree):
         self.degree = degree
         self.basis_name = "HermiteBasis"
@@ -44,16 +56,19 @@ class PolynomialBasis(RegressionBasis):
         self.basis_name = "PolynomialBasis"
 
     def evaluate(self, x: np.ndarray) -> np.ndarray:
-        # Create an array of powers to raise x to
+        # Créer un tableau des puissances de x
         powers = np.arange(self.degree + 1).reshape(-1, 1, 1)
 
-        # Raise x to these powers
+        # Élever x à ces puissances
         polynomial_basis_values = x ** powers
 
         return polynomial_basis_values
 
 
 class PolynomialBasis3D(RegressionBasis):
+    # Classe implémentant la base de régression polynomiale.
+    # Elle élève chaque dimension de x à des puissances allant de 0 à degree
+
     def __init__(self, degree: int):
         self.degree = degree
         self.basis_name = "PolynomialBasis3D"
@@ -84,10 +99,13 @@ class PolynomialBasis3D(RegressionBasis):
 
 
 class MonomialBasis3D(RegressionBasis):
+    # Classe implémentant la base de régression polynomiale 3D.
+    # Elle élève chaque dimension de x à des puissances allant de 1 à degree.
+    # Les valeurs résultantes sont stockées dans un tableau 3D.
+
     def __init__(self, degree: int):
         self.degree = degree
         self.basis_name = "MonomialBasis3D"
-
 
     def evaluate(self, x: np.ndarray) -> np.ndarray:
         powers = np.arange(1, self.degree + 1)
@@ -115,6 +133,10 @@ class MonomialBasis3D(RegressionBasis):
 
 
 class PolynomialHortoBasis3D(RegressionBasis):
+    # Classe implémentant la base de régression polynomiale hortonormale 3D. Elle utilise une base de régression (
+    # e.g., Chebyshev, Laguerre, Hermite) pour évaluer les fonctions hortonormales. La méthode "evaluate" calcule les
+    # produits de fonctions hortonormales pour former une base de régression polynomiale hortonormale.
+
     def __init__(self, degree: int, basis: RegressionBasis):
         self.degree = degree
         self.horto_basis = basis
